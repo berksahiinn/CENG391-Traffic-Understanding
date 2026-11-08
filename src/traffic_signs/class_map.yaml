@@ -2,6 +2,15 @@ names:
   0: stop
   1: yield
   2: speed_limit
-  3: go_straight
-  4: no_u_turn
-  5: warning
+  3: no_entry
+  4: priority_road
+  5: no_parking
+
+# A MTSD label belongs to a class if it starts with the given prefix.
+mapping_rules:
+  "regulatory--stop--": 0
+  "regulatory--yield--": 1
+  "regulatory--maximum-speed-limit-": 2
+  "regulatory--no-entry--": 3
+  "regulatory--priority-road--": 4
+  "regulatory--no-parking--": 5
