@@ -1,0 +1,14 @@
+original_label,mapped_state,count
+Green,green,5207
+Red,red,3057
+RedLeft,red,1092
+off,off,726
+Yellow,yellow,444
+GreenLeft,green,178
+GreenStraight,green,20
+GreenRight,green,13
+RedStraight,red,9
+RedRight,red,5
+GreenStraightRight,green,3
+RedStraightLeft,red,1
+GreenStraightLeft,green,1

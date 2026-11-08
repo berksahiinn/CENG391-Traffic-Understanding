@@ -3,3 +3,12 @@
    runs/
    __pycache__/
    .venv/
+# data and outputs (no leading spaces)
+bosch/
+datasets/
+runs/
+*.pt
+*.zip
+*.cache
+__pycache__/
+.DS_Store

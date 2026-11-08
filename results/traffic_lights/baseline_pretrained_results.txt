@@ -1,0 +1,27 @@
+Model: yolo11n.pt (COCO, class 9 'traffic light') | ultralytics 8.4.208 | torch 2.15.0
+Device: mps (arm64) | imgsz=1280 conf=0.25 | val images: 865
+Mean inference time: 5.7 ms/image (~174.5 FPS, model only)
+
+--- IoU >= 0.5 (class-agnostic) ---
+Precision 0.519 | Recall 0.417 | TP 733 FP 679 GT 1756
+Recall by size:
+   10-20px  0.734  (345/470)
+   <10px    0.150  (152/1013)
+   >=20px   0.864  (236/273)
+Recall by state:
+   green    0.376  (267/711)
+   off      0.486  (34/70)
+   red      0.453  (416/919)
+   yellow   0.286  (16/56)
+
+--- IoU >= 0.3 (class-agnostic) ---
+Precision 0.561 | Recall 0.451 | TP 792 FP 620 GT 1756
+Recall by size:
+   10-20px  0.798  (375/470)
+   <10px    0.174  (176/1013)
+   >=20px   0.883  (241/273)
+Recall by state:
+   green    0.401  (285/711)
+   off      0.557  (39/70)
+   red      0.490  (450/919)
+   yellow   0.321  (18/56)
