@@ -1,0 +1,4 @@
+split,n_images,stop,yield,speed_limit,no_entry,priority_road,no_parking
+train,1014,131,238,556,185,121,206
+val,217,37,48,126,37,15,50
+test,218,21,61,132,33,27,49
