@@ -1,9 +1,4 @@
-   datasets/
-   *.pt
-   runs/
-   __pycache__/
-   .venv/
-# data and outputs (no leading spaces)
+# data and outputs
 bosch/
 datasets/
 runs/
@@ -11,4 +6,5 @@ runs/
 *.zip
 *.cache
 __pycache__/
+.venv/
 .DS_Store
