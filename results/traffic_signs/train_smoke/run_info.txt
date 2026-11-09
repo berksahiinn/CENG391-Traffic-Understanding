@@ -1,0 +1,18 @@
+Date: 2026-11-09 19:19
+Command: python src/traffic_signs/05_train_yolo.py --name smoke --epochs 2 --fraction 0.1
+Start weights: yolo11n.pt
+GPU: NVIDIA GeForce RTX 4060 Laptop GPU | Python 3.12.7 | torch 2.14.1+cu126 | ultralytics 8.4.208
+Hyperparameters (others are ultralytics defaults):
+  data: C:\data\signs_yolo\data.yaml
+  epochs: 2
+  imgsz: 1280
+  batch: 8
+  fraction: 0.1
+  patience: 20
+  workers: 4
+  seed: 42
+  deterministic: True
+  device: 0
+  project: runs\traffic_signs
+  name: smoke
+  exist_ok: True
