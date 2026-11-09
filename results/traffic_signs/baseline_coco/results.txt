@@ -1,0 +1,31 @@
+Model: yolo11n.pt (COCO, class 11 'stop sign') | ultralytics 8.4.208 | torch 2.14.1+cu126
+Device: NVIDIA GeForce RTX 4060 Laptop GPU | imgsz=1280 conf=0.25 | val images: 217
+Mean inference time: 19.8 ms/image (~50.5 FPS, model only)
+Evaluated class: stop only (COCO has no other of our classes)
+Size bins: GT box height in px at model input (longest side = imgsz)
+
+--- IoU >= 0.5 (stop only) ---
+Precision 0.302 | Recall 0.432 | TP 16 FP 37 GT 37
+Recall by size:
+   <10px    0.000  (0/7)
+   10-20px  0.231  (3/13)
+   >=20px   0.765  (13/17)
+False positives located on:
+   background     21
+   speed_limit    9
+   no_entry       4
+   no_parking     2
+   yield          1
+
+--- IoU >= 0.3 (stop only) ---
+Precision 0.302 | Recall 0.432 | TP 16 FP 37 GT 37
+Recall by size:
+   <10px    0.000  (0/7)
+   10-20px  0.231  (3/13)
+   >=20px   0.765  (13/17)
+False positives located on:
+   background     21
+   speed_limit    9
+   no_entry       4
+   no_parking     2
+   yield          1
