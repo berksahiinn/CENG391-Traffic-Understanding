@@ -1,0 +1,18 @@
+Date: 2026-11-10 13:59
+Command: python src/traffic_signs/05_train_yolo.py --name y11n_1280 --epochs 100
+Start weights: yolo11n.pt
+GPU: NVIDIA GeForce RTX 4060 Laptop GPU | Python 3.12.7 | torch 2.14.1+cu126 | ultralytics 8.4.208
+Hyperparameters (others are ultralytics defaults):
+  data: C:\data\signs_yolo\data.yaml
+  epochs: 100
+  imgsz: 1280
+  batch: 8
+  fraction: 1.0
+  patience: 20
+  workers: 4
+  seed: 42
+  deterministic: True
+  device: 0
+  project: C:\Users\berks\OneDrive\Desktop\CENG391-Traffic-Understanding\runs\traffic_signs
+  name: y11n_1280
+  exist_ok: True

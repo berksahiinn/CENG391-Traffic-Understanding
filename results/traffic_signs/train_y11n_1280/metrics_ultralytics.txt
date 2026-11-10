@@ -1,0 +1,22 @@
+Model: runs\traffic_signs\y11n_1280\weights\best.pt
+Note: best.pt was selected on val, so val numbers are slightly optimistic; test is the fair number.
+
+=== val (ultralytics val, imgsz=1280) ===
+class               P      R  mAP50 mAP50-95
+all             0.809  0.607  0.689    0.507
+stop            0.845  0.590  0.694    0.530
+yield           0.879  0.667  0.760    0.543
+speed_limit     0.772  0.643  0.710    0.533
+no_entry        0.751  0.489  0.624    0.418
+priority_road   0.829  0.733  0.766    0.610
+no_parking      0.774  0.520  0.582    0.407
+
+=== test (ultralytics val, imgsz=1280) ===
+class               P      R  mAP50 mAP50-95
+all             0.722  0.631  0.643    0.457
+stop            0.696  0.714  0.734    0.569
+yield           0.819  0.590  0.682    0.451
+speed_limit     0.653  0.671  0.703    0.517
+no_entry        0.832  0.599  0.611    0.395
+priority_road   0.776  0.556  0.571    0.374
+no_parking      0.558  0.653  0.557    0.438

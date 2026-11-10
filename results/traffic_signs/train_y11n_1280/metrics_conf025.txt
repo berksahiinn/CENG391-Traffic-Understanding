@@ -1,0 +1,30 @@
+Model: runs\traffic_signs\y11n_1280\weights\best.pt
+Note: best.pt was selected on val, so val numbers are slightly optimistic; test is the fair number.
+
+=== val (conf=0.25, IoU>=0.5, class-aware) ===
+class               P      R   TP   FP   GT
+stop            0.815  0.595   22    5   37
+yield           0.892  0.688   33    4   48
+speed_limit     0.692  0.659   83   37  126
+no_entry        0.783  0.486   18    5   37
+priority_road   0.846  0.733   11    2   15
+no_parking      0.725  0.580   29   11   50
+all             0.754  0.626  196   64  313
+Recall by GT height at model input (all classes):
+   <10px    0.143  (10/70)
+   10-20px  0.655  (72/110)
+   >=20px   0.857  (114/133)
+
+=== test (conf=0.25, IoU>=0.5, class-aware) ===
+class               P      R   TP   FP   GT
+stop            0.682  0.714   15    7   21
+yield           0.841  0.607   37    7   61
+speed_limit     0.634  0.682   90   52  132
+no_entry        0.850  0.515   17    3   33
+priority_road   0.778  0.519   14    4   27
+no_parking      0.517  0.612   30   28   49
+all             0.668  0.628  203  101  323
+Recall by GT height at model input (all classes):
+   <10px    0.189  (10/53)
+   10-20px  0.551  (70/127)
+   >=20px   0.860  (123/143)
