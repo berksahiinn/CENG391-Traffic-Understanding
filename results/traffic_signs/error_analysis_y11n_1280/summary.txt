@@ -1,0 +1,31 @@
+Val split, conf=0.25, IoU>=0.5
+Confusion matrix (rows true, cols predicted):
+                   stop    yield speed_li no_entry priority no_parki backgrou
+stop                 22        1        0        3        0        0       11
+yield                 0       33        0        0        0        0       15
+speed_limit           0        0       83        0        0        0       43
+no_entry              1        0        0       18        0        0       18
+priority_road         0        0        1        0       11        0        3
+no_parking            0        0        1        0        0       29       20
+background            4        3       35        2        2       11        0
+
+Correct: 196 | wrong class: 7 | false positives: 57 | missed: 110
+
+False positives on an unused MTSD sign: 36 / 57
+False positives on no annotated sign: 21 / 57
+Most frequent unused MTSD labels under false positives:
+    17  other-sign
+     6  regulatory--no-stopping
+     3  regulatory--no-u-turn
+     3  regulatory--weight-limit
+     2  regulatory--no-bicycles
+     1  regulatory--road-closed-to-vehicles
+     1  regulatory--no-overtaking
+     1  regulatory--no-mopeds-or-bicycles
+     1  regulatory--no-pedestrians
+     1  warning--uneven-road
+
+Missed signs by size (height at model input):
+   10-20px  35
+   <10px    56
+   >=20px   19
