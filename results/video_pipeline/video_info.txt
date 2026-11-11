@@ -1,0 +1,5 @@
+video: datasets/videos/sample_drive.mp4
+resolution: 1280x720
+fps: 30.00
+frame_count: 600
+duration_s: 20.00
