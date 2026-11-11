@@ -62,6 +62,16 @@ report/                # progress report (LaTeX)
 
 Run commands will be added by each module owner once they are tested.
 
+Video pipeline (Person 3), from the repo root:
+
+```bash
+python src/video_pipeline/test_pipeline.py
+python src/video_pipeline/video_info.py --video datasets/videos/sample_drive.mp4
+python src/video_pipeline/video_processing.py --video datasets/videos/sample_drive.mp4 --track --name finetuned_track
+```
+
+Weights, the test video and all options: `src/video_pipeline/README.md`.
+
 ## References
 
 - Ertler et al., *The Mapillary Traffic Sign Dataset for Detection and Classification on a Global Scale*, ECCV 2020.

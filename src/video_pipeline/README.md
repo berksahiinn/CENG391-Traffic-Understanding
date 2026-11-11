@@ -95,3 +95,31 @@ From `results/video_pipeline/baseline_track/` and `finetuned_track/` on the 20 s
 - **Untracked rows.** 54 of 381 rows in `finetuned_track` and 104 of 123 in `baseline_track` have no id. These are frames where the tracker has no confirmed track at all, and then Ultralytics returns the raw detections. The COCO model's scores sit close to 0.25 and flicker, so its tracks are rarely confirmed.
 - **Track mode changes the boxes.** In track mode the boxes are ByteTrack's smoothed boxes, and an object's first frame can be missing, so `baseline_track` (123 rows) and `baseline_detect` (124 rows) do not match box for box ([ADR-0004](adr/0004-bytetrack-per-model-low-conf-tracking.md)).
 - **False positives.** The COCO model calls a red oval shop sign a stop sign (frame 2). The sign model reports one `stop` row, and there is no stop sign in the clip.
+
+## Integration plan
+
+How the two detection modules are called and combined (code: `video_processing.py`):
+
+1. **Calling the models.** Both are YOLO11n `.pt` files loaded with `YOLO(path)`: lights from Person 1 (classes red, yellow, green, off) and signs from Person 2 (stop, yield, speed_limit, no_entry, priority_road, no_parking). Each frame goes to each model with `imgsz=1280`. Class names come from `model.names`, so nothing is hard-coded.
+2. **Tracking.** Each model is called with `model.track(frame, conf=0.1, persist=True, tracker="bytetrack.yaml")`. Every model keeps its own tracker, and rows below conf 0.25 are dropped afterwards ([ADR-0004](adr/0004-bytetrack-per-model-low-conf-tracking.md)).
+3. **Combining the boxes.** The rows of both models for a frame are concatenated, each tagged with `source`. There is no cross-model NMS because the class sets do not overlap ([ADR-0002](adr/0002-one-frame-loop-concatenate-models.md)).
+4. **Output.** One annotated video and one `detections.csv` in the common format ([ADR-0003](adr/0003-detection-csv-format-with-source.md)), plus `run_info.txt` with settings and speed.
+
+Next stage:
+- Evaluate on video with labels (Person 4). The Bosch test sequences have light labels; there is no labelled video for signs yet.
+- A test clip with more traffic lights, ideally closer to the Bosch domain, to separate the domain gap from tracking problems.
+- Majority-vote smoothing of the light colour per track (Person 1's suggestion), once a clip shows colour flicker inside a track.
+- Run on the RTX 4070 machine to get speed numbers comparable with the teammates' GPU numbers.
+
+## Implementation status
+
+| Item | Status | Evidence |
+|---|---|---|
+| Architecture diagram and shared fields | done | this README, `results/video_pipeline/architecture.png` |
+| Sample video, info and sample frames | done | `results/video_pipeline/video_info.txt`, `sample_frames/` |
+| Detection on video, COCO baseline | done | `results/video_pipeline/baseline_detect/` |
+| Tracking with ids (ByteTrack) | done | `results/video_pipeline/baseline_track/` |
+| Both fine-tuned models in one pipeline | done | `results/video_pipeline/finetuned_track/` |
+| Speed | measured | MacBook, Apple M4 (MPS), 1280×720 at imgsz 1280: both models + tracking 21.0 FPS end to end (light 3.4 ms, sign 3.2 ms inference per frame); COCO baseline 35.4 FPS detect only, 34.3 FPS with tracking |
+| Evaluation on labelled video | next stage | Person 4 |
+| Colour smoothing per track | next stage | no flicker seen on the test clip |
