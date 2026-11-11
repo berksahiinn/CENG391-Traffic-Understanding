@@ -68,7 +68,7 @@ python src/video_pipeline/video_info.py --video datasets/videos/sample_drive.mp4
 python src/video_pipeline/video_processing.py --video datasets/videos/sample_drive.mp4 --baseline --name baseline_detect
 ```
 
-Weights go in `models/` (ignored by git): `traffic_lights_y11n_1280_best.pt` from Person 1's Drive link, `traffic_signs_y11n_1280.pt` from the GitHub Release `signs-y11n-1280-v1`.
+Weights go in `models/` (ignored by git): `traffic_lights_y11n_1280_best.pt` from Person 1's [Drive link](https://drive.google.com/file/d/1XzQtAnm4rvAYFkEH2tfSxi2aus6NLnha/view?usp=sharing), `traffic_signs_y11n_1280.pt` from the GitHub Release `signs-y11n-1280-v1`.
 
 OpenCV writes `annotated.mp4` with the mp4v codec (about 50 MB for 20 s, and browsers cannot play it), so it is not in git. The committed copy is made with:
 
@@ -87,7 +87,7 @@ python src/video_pipeline/video_processing.py --video datasets/videos/sample_dri
 
 From `results/video_pipeline/baseline_track/` and `finetuned_track/` on the 20 s test clip (600 frames). Frame numbers are `frame_index`.
 
-- **Signs are tracked well.** A yield sign keeps id 20 from frame 105 to 207 (93 rows), a closer yield sign keeps id 41 from 284 to 339, and a far no_entry sign of about 10 px keeps id 51 from 362 to 584 even though it is missed in 55 of those frames. ByteTrack holds a lost track for 30 frames, which is what bridges these gaps.
+- **Signs are tracked well.** A yield sign keeps id 20 from frame 105 to 207 (93 rows), a closer yield sign keeps id 41 from 284 to 339, and a far no_entry sign of about 10 px keeps id 51 from 362 to 584 even though it has no row at conf ≥ 0.25 in 55 of those frames (longest gap 23 frames). ByteTrack's low-score pass (conf 0.1–0.25) and its 30-frame buffer for lost tracks bridge these gaps.
 - **Lost and back with a new id.** The yield track 20 ends at frame 207 and track 41 starts at 284. The gap (77 frames) is longer than ByteTrack's 30-frame buffer, so if this is the same sign it comes back with a new id. Without labels I cannot say for sure.
 - **Tiny objects rarely get an id.** Speed limit signs of 10–12 px produce single-frame tracks (ids 8, 54) or a track with more gaps than hits (id 62: 5 hits over 32 frames).
 - **Lights are the weak part on this clip.** The light model gives only 17 rows (11 red, 6 green), and only one becomes a track (id 56, frames 412–413). The light model was trained on US footage (Bosch), and Polish lights look different, so this is mostly a domain gap and not a tracking problem ([ADR-0001](adr/0001-sample-video-krakow-cc-by.md)).

@@ -67,10 +67,10 @@ Video pipeline (Person 3), from the repo root:
 ```bash
 python src/video_pipeline/test_pipeline.py
 python src/video_pipeline/video_info.py --video datasets/videos/sample_drive.mp4
-python src/video_pipeline/video_processing.py --video datasets/videos/sample_drive.mp4 --track --name finetuned_track
+python src/video_pipeline/video_processing.py --video datasets/videos/sample_drive.mp4 --track --name my_run
 ```
 
-Weights, the test video and all options: `src/video_pipeline/README.md`.
+`--name` picks the output folder under `results/video_pipeline/`; the folders already there hold the committed results. Weights, the test video and all options: `src/video_pipeline/README.md`.
 
 ## References
 
