@@ -12,6 +12,7 @@ import cv2
 # The team contract. x1, y1, x2, y2 is bbox_xyxy in pixels of the original frame.
 CSV_FIELDS = ["frame_index", "x1", "y1", "x2", "y2",
               "class_name", "confidence", "track_id", "source"]
+CONF = 0.25   # team confidence threshold, agreed with Person 1 and 2
 
 # Box colours in BGR (OpenCV order, not RGB). Sign classes use DEFAULT_COLOR.
 COLORS = {"red": (0, 0, 255), "yellow": (0, 255, 255),
@@ -57,3 +58,13 @@ def draw_rows(frame, rows):
         # Small font on purpose: the objects are tiny and a big label would hide them.
         cv2.putText(frame, f"{r['class_name']}{tid} {r['confidence']:.2f}",
                     (x1, max(y1 - 5, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 1)
+
+
+def keep_rows(rows, track, conf=CONF):
+    """Keep rows with confidence >= conf. In track mode, also drop rows without a track id.
+
+    When a tracker has no confirmed track in a frame, Ultralytics returns the raw boxes
+    without ids; when it has one, it returns only tracked boxes. Keeping only confirmed
+    tracks makes track-mode output the same in both cases.
+    """
+    return [r for r in rows if r["confidence"] >= conf and (not track or r["track_id"] is not None)]

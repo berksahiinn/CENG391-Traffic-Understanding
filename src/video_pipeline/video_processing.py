@@ -24,10 +24,10 @@ import torch
 import ultralytics
 from ultralytics import YOLO
 
-from pipeline_utils import CSV_FIELDS, draw_rows, make_rows
+from pipeline_utils import CONF, CSV_FIELDS, draw_rows, keep_rows, make_rows
 
 OUT_ROOT = Path("results") / "video_pipeline"
-IMGSZ, CONF = 1280, 0.25        # agreed with Person 1 and 2; a smaller imgsz loses the tiny objects
+IMGSZ = 1280                    # agreed with Person 1 and 2; a smaller imgsz loses the tiny objects
 TRACK_CONF = 0.1                # ByteTrack's second matching pass uses boxes between 0.1 and 0.25
 TRACKER = "bytetrack.yaml"      # ships with Ultralytics
 
@@ -76,6 +76,8 @@ def run(video, name, baseline, track):
     out_dir.mkdir(parents=True, exist_ok=True)
     # The writer size must equal the frame size, otherwise OpenCV writes a broken file silently.
     writer = cv2.VideoWriter(str(out_dir / "annotated.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
+    if not writer.isOpened():
+        raise RuntimeError("cv2.VideoWriter could not open annotated.mp4 (no mp4v codec in this OpenCV build?)")
     infer_ms = {source: [] for source in models}
     frame_index, n_rows = 0, 0
     start = time.perf_counter()
@@ -93,7 +95,7 @@ def run(video, name, baseline, track):
                 ids = r.boxes.id.int().tolist() if r.boxes.id is not None else None
                 rows += make_rows(frame_index, source, model.names, r.boxes.xyxy.tolist(),
                                   r.boxes.cls.int().tolist(), r.boxes.conf.tolist(), ids)
-            rows = [r for r in rows if r["confidence"] >= CONF]  # tracking ran at TRACK_CONF
+            rows = keep_rows(rows, track)  # tracking ran at TRACK_CONF
             draw_rows(frame, rows)
             writer.write(frame)
             csv_writer.writerows(rows)

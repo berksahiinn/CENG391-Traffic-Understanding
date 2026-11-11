@@ -14,7 +14,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from pipeline_utils import CSV_FIELDS, draw_rows, make_rows
+from pipeline_utils import CSV_FIELDS, draw_rows, keep_rows, make_rows
 from video_info import read_video_info, save_sample_frames
 
 NAMES = {0: "red", 1: "yellow", 2: "green", 3: "off"}
@@ -87,6 +87,16 @@ def test_draw_rows_empty_keeps_frame():
     frame = np.zeros((100, 100, 3), np.uint8)
     draw_rows(frame, [])
     assert not frame.any()
+
+
+def test_keep_rows_track_mode_keeps_only_confirmed_tracks():
+    rows = make_rows(0, "sign", {0: "stop"}, [[0, 0, 1, 1]] * 3, [0, 0, 0], [0.9, 0.9, 0.2], [4, None, 5])
+    assert [r["track_id"] for r in keep_rows(rows, track=True)] == [4]   # no id -> dropped, 0.2 -> dropped
+
+
+def test_keep_rows_detect_mode_keeps_rows_without_ids():
+    rows = make_rows(0, "light", NAMES, [[0, 0, 1, 1]] * 2, [2, 2], [0.25, 0.2499])
+    assert [r["confidence"] for r in keep_rows(rows, track=False)] == [0.25]
 
 
 if __name__ == "__main__":
