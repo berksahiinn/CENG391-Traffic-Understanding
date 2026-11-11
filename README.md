@@ -38,6 +38,14 @@ All modules use the same output fields so they can be combined in the video pipe
 frame_index, bbox_xyxy, class_name, confidence, track_id (optional)
 ```
 
+In CSV files the box is written as four columns `x1, y1, x2, y2` (pixels of the original frame). The video pipeline adds a `source` column (`light`, `sign` or `coco`) because track ids are counted per model, so one tracked object is `(source, track_id)`:
+
+```
+frame_index, x1, y1, x2, y2, class_name, confidence, track_id, source
+```
+
+Details: `src/video_pipeline/README.md`.
+
 ## Project Structure
 
 ```
