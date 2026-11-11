@@ -1,6 +1,6 @@
 # Video processing, tracking and integration
 
-Owner: Person 3. Reads a recorded driving video, runs the traffic light and traffic sign detectors on every frame, tracks the boxes with ByteTrack, and writes an annotated video and a CSV in the common detection format. Design decisions are recorded in [`adr/`](adr/README.md).
+Owner: Person 3. Reads a recorded driving video, runs the traffic light and traffic sign detectors on every frame, tracks the boxes with ByteTrack, and writes an annotated video and a CSV in the common detection format.
 
 ## Architecture
 
@@ -21,11 +21,11 @@ flowchart LR
     C --> E["Person 4: evaluation"]
 ```
 
-Each frame goes through both models one after the other. Each model keeps its own ByteTrack tracker. The rows of both models are concatenated, because the two models share no classes ([ADR-0002](adr/0002-one-frame-loop-concatenate-models.md)).
+Each frame goes through both models one after the other. Each model keeps its own ByteTrack tracker. The rows of both models are concatenated, because the two models share no classes.
 
 ## Common detection format
 
-One row per detected box in `detections.csv` ([ADR-0003](adr/0003-detection-csv-format-with-source.md)):
+One row per detected box in `detections.csv`:
 
 | Field | Type | Meaning | Example |
 |---|---|---|---|
@@ -50,7 +50,7 @@ Fixed settings: `imgsz=1280`, `conf=0.25`.
 | Part used | 58–78 s of the 1080p transcode, scaled to 1280×720, 30 fps, H.264, no audio |
 | Info | 1280×720, 30 fps, 600 frames, 20 s (`results/video_pipeline/video_info.txt`) |
 
-Why this clip: [ADR-0001](adr/0001-sample-video-krakow-cc-by.md). To rebuild it (the first 100 MB of the transcode cover the first two minutes):
+To rebuild it (the first 100 MB of the transcode cover the first two minutes):
 
 ```bash
 mkdir -p datasets/videos/raw
@@ -90,10 +90,10 @@ From `results/video_pipeline/baseline_track/` and `finetuned_track/` on the 20 s
 - **Signs are tracked well.** A yield sign keeps id 20 from frame 105 to 207 (93 rows), a closer yield sign keeps id 41 from 284 to 339, and a far no_entry sign of about 10 px keeps id 51 from 362 to 584 even though it has no row at conf ≥ 0.25 in 55 of those frames (longest gap 23 frames). ByteTrack's low-score pass (conf 0.1–0.25) and its 30-frame buffer for lost tracks bridge these gaps.
 - **Lost and back with a new id.** The yield track 20 ends at frame 207 and track 41 starts at 284. The gap (77 frames) is longer than ByteTrack's 30-frame buffer, so if this is the same sign it comes back with a new id. Without labels I cannot say for sure.
 - **Tiny objects rarely get an id.** Speed limit signs of 10–12 px produce single-frame tracks (ids 8, 54) or a track with more gaps than hits (id 62: 5 hits over 32 frames).
-- **Lights are the weak part on this clip.** The light model gives only 17 rows (11 red, 6 green), and only one becomes a track (id 56, frames 412–413). The light model was trained on US footage (Bosch), and Polish lights look different, so this is mostly a domain gap and not a tracking problem ([ADR-0001](adr/0001-sample-video-krakow-cc-by.md)).
+- **Lights are the weak part on this clip.** The light model gives only 17 rows (11 red, 6 green), and only one becomes a track (id 56, frames 412–413). The light model was trained on US footage (Bosch), and Polish lights look different, so this is mostly a domain gap and not a tracking problem.
 - **No class flicker inside a track.** No track changes its class in either run, so the majority-vote smoothing that Person 1 suggested has nothing to fix on this clip yet.
 - **Untracked rows.** 54 of 381 rows in `finetuned_track` and 104 of 123 in `baseline_track` have no id. These are frames where the tracker has no confirmed track at all, and then Ultralytics returns the raw detections. The COCO model's scores sit close to 0.25 and flicker, so its tracks are rarely confirmed.
-- **Track mode changes the boxes.** In track mode the boxes are ByteTrack's smoothed boxes, and an object's first frame can be missing, so `baseline_track` (123 rows) and `baseline_detect` (124 rows) do not match box for box ([ADR-0004](adr/0004-bytetrack-per-model-low-conf-tracking.md)).
+- **Track mode changes the boxes.** In track mode the boxes are ByteTrack's smoothed boxes, and an object's first frame can be missing, so `baseline_track` (123 rows) and `baseline_detect` (124 rows) do not match box for box.
 - **False positives.** The COCO model calls a red oval shop sign a stop sign (frame 2). The sign model reports one `stop` row, and there is no stop sign in the clip.
 
 ## Integration plan
@@ -101,9 +101,9 @@ From `results/video_pipeline/baseline_track/` and `finetuned_track/` on the 20 s
 How the two detection modules are called and combined (code: `video_processing.py`):
 
 1. **Calling the models.** Both are YOLO11n `.pt` files loaded with `YOLO(path)`: lights from Person 1 (classes red, yellow, green, off) and signs from Person 2 (stop, yield, speed_limit, no_entry, priority_road, no_parking). Each frame goes to each model with `imgsz=1280`. Class names come from `model.names`, so nothing is hard-coded.
-2. **Tracking.** Each model is called with `model.track(frame, conf=0.1, persist=True, tracker="bytetrack.yaml")`. Every model keeps its own tracker, and rows below conf 0.25 are dropped afterwards ([ADR-0004](adr/0004-bytetrack-per-model-low-conf-tracking.md)).
-3. **Combining the boxes.** The rows of both models for a frame are concatenated, each tagged with `source`. There is no cross-model NMS because the class sets do not overlap ([ADR-0002](adr/0002-one-frame-loop-concatenate-models.md)).
-4. **Output.** One annotated video and one `detections.csv` in the common format ([ADR-0003](adr/0003-detection-csv-format-with-source.md)), plus `run_info.txt` with settings and speed.
+2. **Tracking.** Each model is called with `model.track(frame, conf=0.1, persist=True, tracker="bytetrack.yaml")`. Every model keeps its own tracker, and rows below conf 0.25 are dropped afterwards.
+3. **Combining the boxes.** The rows of both models for a frame are concatenated, each tagged with `source`. There is no cross-model NMS because the class sets do not overlap.
+4. **Output.** One annotated video and one `detections.csv` in the common format, plus `run_info.txt` with settings and speed.
 
 Next stage:
 - Evaluate on video with labels (Person 4). The Bosch test sequences have light labels; there is no labelled video for signs yet.
