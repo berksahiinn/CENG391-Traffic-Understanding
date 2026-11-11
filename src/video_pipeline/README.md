@@ -75,3 +75,23 @@ OpenCV writes `annotated.mp4` with the mp4v codec (about 50 MB for 20 s, and bro
 ```bash
 ffmpeg -i results/video_pipeline/<name>/annotated.mp4 -c:v libx264 -crf 28 -pix_fmt yuv420p results/video_pipeline/<name>/annotated_small.mp4
 ```
+
+Tracking runs:
+
+```bash
+python src/video_pipeline/video_processing.py --video datasets/videos/sample_drive.mp4 --baseline --track --name baseline_track
+python src/video_pipeline/video_processing.py --video datasets/videos/sample_drive.mp4 --track --name finetuned_track
+```
+
+## Tracking observations
+
+From `results/video_pipeline/baseline_track/` and `finetuned_track/` on the 20 s test clip (600 frames). Frame numbers are `frame_index`.
+
+- **Signs are tracked well.** A yield sign keeps id 20 from frame 105 to 207 (93 rows), a closer yield sign keeps id 41 from 284 to 339, and a far no_entry sign of about 10 px keeps id 51 from 362 to 584 even though it is missed in 55 of those frames. ByteTrack holds a lost track for 30 frames, which is what bridges these gaps.
+- **Lost and back with a new id.** The yield track 20 ends at frame 207 and track 41 starts at 284. The gap (77 frames) is longer than ByteTrack's 30-frame buffer, so if this is the same sign it comes back with a new id. Without labels I cannot say for sure.
+- **Tiny objects rarely get an id.** Speed limit signs of 10–12 px produce single-frame tracks (ids 8, 54) or a track with more gaps than hits (id 62: 5 hits over 32 frames).
+- **Lights are the weak part on this clip.** The light model gives only 17 rows (11 red, 6 green), and only one becomes a track (id 56, frames 412–413). The light model was trained on US footage (Bosch), and Polish lights look different, so this is mostly a domain gap and not a tracking problem ([ADR-0001](adr/0001-sample-video-krakow-cc-by.md)).
+- **No class flicker inside a track.** No track changes its class in either run, so the majority-vote smoothing that Person 1 suggested has nothing to fix on this clip yet.
+- **Untracked rows.** 54 of 381 rows in `finetuned_track` and 104 of 123 in `baseline_track` have no id. These are frames where the tracker has no confirmed track at all, and then Ultralytics returns the raw detections. The COCO model's scores sit close to 0.25 and flicker, so its tracks are rarely confirmed.
+- **Track mode changes the boxes.** In track mode the boxes are ByteTrack's smoothed boxes, and an object's first frame can be missing, so `baseline_track` (123 rows) and `baseline_detect` (124 rows) do not match box for box ([ADR-0004](adr/0004-bytetrack-per-model-low-conf-tracking.md)).
+- **False positives.** The COCO model calls a red oval shop sign a stop sign (frame 2). The sign model reports one `stop` row, and there is no stop sign in the clip.
