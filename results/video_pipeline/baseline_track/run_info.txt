@@ -1,0 +1,8 @@
+video: datasets/videos/sample_drive.mp4
+weights: coco=yolo11n.pt
+imgsz: 1280  conf: 0.25  track: True  (tracker bytetrack.yaml, tracked at conf 0.1, output filtered at 0.25)
+device: mps
+frames: 600  rows: 19
+total_s: 18.8  end_to_end_fps: 32.0  (decode + all models + tracking + drawing + writing)
+mean_inference_ms[coco]: 3.7
+ultralytics: 8.4.123  torch: 2.14.1  opencv: 5.0.0

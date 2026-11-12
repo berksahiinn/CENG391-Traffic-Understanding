@@ -1,0 +1,8 @@
+video: datasets/videos/sample_drive.mp4
+weights: coco=yolo11n.pt
+imgsz: 1280  conf: 0.25  track: False
+device: mps
+frames: 600  rows: 124
+total_s: 16.9  end_to_end_fps: 35.4  (decode + all models + tracking + drawing + writing)
+mean_inference_ms[coco]: 3.4
+ultralytics: 8.4.123  torch: 2.14.1  opencv: 5.0.0
