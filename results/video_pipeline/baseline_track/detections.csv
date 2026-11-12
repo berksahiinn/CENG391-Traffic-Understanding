@@ -1,0 +1,20 @@
+frame_index,x1,y1,x2,y2,class_name,confidence,track_id,source
+86,372.3,369.1,396.8,396.3,traffic light,0.5291,29,coco
+87,366.9,367.2,391.8,394.8,traffic light,0.6168,29,coco
+88,360.1,365.4,384.5,392.5,traffic light,0.4604,29,coco
+89,352.6,363.6,377.2,391.0,traffic light,0.3233,29,coco
+91,337.1,359.0,362.9,387.8,traffic light,0.4938,29,coco
+92,329.2,356.4,355.9,386.3,traffic light,0.5562,29,coco
+93,321.1,353.9,348.4,384.4,traffic light,0.626,29,coco
+94,312.6,351.5,340.6,383.0,traffic light,0.5881,29,coco
+95,302.7,348.4,331.8,381.2,traffic light,0.5574,29,coco
+96,291.6,345.7,322.6,380.7,traffic light,0.6,29,coco
+97,281.2,342.7,313.8,380.0,traffic light,0.3659,29,coco
+98,270.6,340.0,304.1,378.4,traffic light,0.6558,29,coco
+99,259.2,337.2,292.7,376.0,traffic light,0.3224,29,coco
+101,237.4,330.4,270.1,369.0,traffic light,0.5212,29,coco
+102,225.5,327.2,257.3,365.5,traffic light,0.4137,29,coco
+103,208.8,322.9,242.0,362.9,traffic light,0.4918,29,coco
+104,192.8,317.1,227.9,360.0,traffic light,0.678,29,coco
+105,176.9,313.6,212.2,357.4,traffic light,0.5251,29,coco
+527,66.0,340.7,84.9,370.2,traffic light,0.3799,96,coco

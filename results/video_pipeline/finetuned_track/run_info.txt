@@ -1,0 +1,9 @@
+video: datasets/videos/sample_drive.mp4
+weights: light=models/traffic_lights_y11n_1280_best.pt, sign=models/traffic_signs_y11n_1280.pt
+imgsz: 1280  conf: 0.25  track: True  (tracker bytetrack.yaml, tracked at conf 0.1, output filtered at 0.25)
+device: mps
+frames: 600  rows: 327
+total_s: 30.4  end_to_end_fps: 19.7  (decode + all models + tracking + drawing + writing)
+mean_inference_ms[light]: 3.7
+mean_inference_ms[sign]: 3.5
+ultralytics: 8.4.123  torch: 2.14.1  opencv: 5.0.0
