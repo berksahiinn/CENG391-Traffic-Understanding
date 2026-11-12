@@ -52,6 +52,7 @@ All files are in the repo. Coordinates are in original image pixels. `frame_inde
 | `results/traffic_signs/train_y11n_1280/predictions_val.csv`, `predictions_test.csv` | Predictions at conf 0.25: `frame_index,image,x1,y1,x2,y2,class_name,confidence` |
 | `results/traffic_signs/handover/gt_val.csv`, `gt_test.csv` | Ground truth: `frame_index,image,x1,y1,x2,y2,class_name` |
 | `results/traffic_signs/handover/splits/{train,val,test}.txt` | Image names in each split |
+| `results/traffic_signs/handover/image_sizes.csv` | `image,width,height` of every val and test image (original pixels). Sizes vary, so use them to scale boxes to the model input for recall by size: `scale = 1280 / max(width, height)`, size = box height × scale. This is the rule `06_evaluate.py` uses for its bins (<10, 10-20, >=20 px). |
 | `results/traffic_signs/train_y11n_1280/metrics_*.txt` | Metrics computed by `06_evaluate.py` |
 
 Split: random image-level split with seed 42 over the 1449 MTSD images that contain at least one target sign. Train has 1014 images, val 217 (313 boxes), test 218 (323 boxes). The model was selected on val, so **test is the fair split for reporting**.

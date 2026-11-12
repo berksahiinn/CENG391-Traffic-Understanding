@@ -6,6 +6,7 @@ Creates:
   results/traffic_signs/handover/
     splits/{train,val,test}.txt           image names of each split (seed 42 random split)
     gt_val.csv, gt_test.csv               ground-truth boxes in pixels, same columns as predictions
+    image_sizes.csv                       image,width,height of all val and test images
     sample_predictions/                   a few test images with predicted boxes drawn
 
 Predictions themselves were already written by 06_evaluate.py:
@@ -55,13 +56,15 @@ def main():
         (out_dir / "splits" / f"{split}.txt").write_text("\n".join(names) + "\n")
         print(f"{split}: {len(names)} images")
 
-    # 3) Ground truth in pixels (needs the image size)
+    # 3) Ground truth in pixels (needs the image size) and the image sizes themselves
+    size_rows = []
     for split in ["val", "test"]:
         rows = []
         img_paths = sorted((DATA_DIR / "images" / split).glob("*.jpg"))
         for frame_index, img_path in enumerate(img_paths):
             with Image.open(img_path) as im:   # reads only the header, fast
                 W, H = im.size
+            size_rows.append([img_path.name, W, H])
             label = DATA_DIR / "labels" / split / (img_path.stem + ".txt")
             for line in label.read_text().splitlines():
                 c, xc, yc, w, h = map(float, line.split())
@@ -73,6 +76,15 @@ def main():
             w_.writerow(["frame_index", "image", "x1", "y1", "x2", "y2", "class_name"])
             w_.writerows(rows)
         print(f"gt_{split}.csv: {len(rows)} boxes")
+
+    # Original image sizes (val + test). Needed to scale boxes to the model input
+    # (longest side = imgsz) for recall by size, because MTSD image sizes vary.
+    with open(out_dir / "image_sizes.csv", "w", newline="") as f:
+        w_ = csv.writer(f)
+        w_.writerow(["image", "width", "height"])
+        w_.writerows(size_rows)
+    print(f"image_sizes.csv: {len(size_rows)} images, "
+          f"{len(set((r[1], r[2]) for r in size_rows))} distinct sizes")
 
     # 4) Sample predictions on random test images
     random.seed(SEED)
