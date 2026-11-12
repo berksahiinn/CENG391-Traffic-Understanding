@@ -23,7 +23,6 @@ Note: prediction files are cut at conf >= 0.25, so mAP50 must NOT be computed fr
 (the PR curve is truncated); use Ultralytics val (conf=0.001) for mAP50.
 """
 import argparse
-import io
 import zipfile
 from pathlib import Path
 
@@ -156,10 +155,10 @@ def confusion(pred_m, gt_m, classes):
     return cm
 
 
-def evaluate(pred, gt, classes, dim="h", scale=None):
+def evaluate(pred, gt, classes, dim="h", scale=None, iou_t=IOU_T):
     res = {}
     for aware in (False, True):
-        p, g = match(pred, gt, class_aware=aware)
+        p, g = match(pred, gt, class_aware=aware, iou_t=iou_t)
         g = add_size(g, dim, scale)
         key = "class_aware" if aware else "class_agnostic"
         res[key] = dict(summary=summary(p, g), by_size=recall_by_size(g), by_class=recall_by_class(g))
@@ -202,6 +201,8 @@ def main():
     ap.add_argument("--sizes", default=None,
                     help="CSV image,width,height (original px). Box sizes are scaled to model input.")
     ap.add_argument("--imgsz", type=int, default=1280, help="model input size (longest side)")
+    ap.add_argument("--iou", type=float, default=IOU_T,
+                    help="IoU threshold for a match (protocol: 0.5; other values are sensitivity checks only)")
     a = ap.parse_args()
     pred = load_csv(a.pred) if a.pred.endswith(".csv") else load_yolo_txt(a.pred)
     if a.kind == "lights":
@@ -216,7 +217,8 @@ def main():
         if g["width"].isna().any():
             raise SystemExit(f"{g['width'].isna().sum()} gt boxes have no image size in {a.sizes}")
         scale = (a.imgsz / g[["width", "height"]].max(axis=1)).to_numpy()
-    res = evaluate(pred, gt, classes, dim=None if a.size_dim == "none" else a.size_dim, scale=scale)
+    res = evaluate(pred, gt, classes, dim=None if a.size_dim == "none" else a.size_dim, scale=scale,
+                   iou_t=a.iou)
     print(write(res, a.out).to_string(index=False))
     print(res["class_agnostic"]["by_size"].to_string(index=False))
     print(res["confusion"].to_string())
