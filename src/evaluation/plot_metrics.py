@@ -33,8 +33,9 @@ plt.rcParams.update({
 
 def save(fig, name):
     OUT.mkdir(parents=True, exist_ok=True)
-    for ext in ("png", "pdf"):
-        fig.savefig(OUT / f"{name}.{ext}", dpi=200, bbox_inches="tight")
+    fig.savefig(OUT / f"{name}.png", dpi=200, bbox_inches="tight")
+    # no creation date in the PDF, so re-running gives byte-identical files (no false git changes)
+    fig.savefig(OUT / f"{name}.pdf", bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
     print("saved", OUT / f"{name}.png")
 
