@@ -1,0 +1,19 @@
+video: datasets/videos/sample_drive.mp4  (600 frames, 1280x720)
+hardware: Apple M3 Pro  device: mps  os: macOS-15.6.1-arm64-arm-64bit
+python 3.12.7  torch 2.15.0  ultralytics 8.4.211  opencv 5.0.0
+weights: models/traffic_lights_y11n_1280_best.pt, models/traffic_signs_y11n_1280.pt
+imgsz 1280  conf 0.25  track False  batch 1
+warm-up frames (not measured): 20  measured frames: 300
+
+per frame (ms)            mean  median     p95
+decode_ms                 0.41    0.41    0.51
+light_ms                 10.94   10.92   11.05
+sign_ms                  11.65   11.12   12.00
+model_only_ms            22.59   22.08   22.99
+end_to_end_ms            23.00   22.56   23.41
+light_infer_ms            3.90    3.89    4.10
+sign_infer_ms             3.79    3.79    3.99
+
+model-only FPS (both models): 44.3
+end-to-end FPS (decode + both models): 43.5
+light_infer_ms / sign_infer_ms = Ultralytics' own 'inference' timing (model forward only).
