@@ -9,11 +9,13 @@ The exit code is 0 only when every test prints ok.
 import sys
 import tempfile
 import traceback
+import zipfile
 from pathlib import Path
 
 import cv2
 import numpy as np
 
+from frames_to_video import zip_frames_to_video
 from pipeline_utils import CSV_FIELDS, draw_rows, keep_rows, make_rows
 from video_info import read_video_info, save_sample_frames
 
@@ -97,6 +99,22 @@ def test_keep_rows_track_mode_keeps_only_confirmed_tracks():
 def test_keep_rows_detect_mode_keeps_rows_without_ids():
     rows = make_rows(0, "light", NAMES, [[0, 0, 1, 1]] * 2, [2, 2], [0.25, 0.2499])
     assert [r["confidence"] for r in keep_rows(rows, track=False)] == [0.25]
+
+
+def test_zip_frames_to_video_numeric_order():
+    with tempfile.TemporaryDirectory() as d:
+        zip_path, out = Path(d) / "frames.zip", Path(d) / "out.mp4"
+        with zipfile.ZipFile(zip_path, "w") as z:
+            for n in [10, 9, 11]:   # alphabetical order would be 10, 11, 9
+                z.writestr(f"set/rgb/test/{n}.png", cv2.imencode(".png", np.full((48, 64, 3), n * 10, np.uint8))[1].tobytes())
+        assert zip_frames_to_video(zip_path, out, fps=5) == 3
+        cap = cv2.VideoCapture(str(out)); means = []
+        while True:
+            ok, f = cap.read()
+            if not ok:
+                break
+            means.append(f.mean())
+        assert len(means) == 3 and means[0] < means[1] < means[2]   # 9, 10, 11
 
 
 if __name__ == "__main__":
