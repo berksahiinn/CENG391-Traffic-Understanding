@@ -12,7 +12,7 @@ Driving video → Object detection (YOLO) → Classification (light state / sign
 |---|---|---|
 | [Name] | Traffic light detection and state classification | `src/traffic_lights/` |
 | [Name] | Traffic sign detection and type classification | `src/traffic_signs/` |
-| [Name] | Video processing, tracking, integration | `src/video_pipeline/` |
+| Ege Ayhan | Video processing, tracking, integration | `src/video_pipeline/` |
 | [Name] | Evaluation, robustness, experiments | `src/evaluation/` |
 
 ## Installation
