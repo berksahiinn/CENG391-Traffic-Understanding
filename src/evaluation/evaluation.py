@@ -11,13 +11,19 @@ Matching rule (same as Person 1 and Person 2 used, so numbers can be reproduced)
       - class-agnostic: the class is ignored (measures "was an object found?")
   * every other prediction is an FP; every GT box left unused is an FN
 
-Usage:
-  python evaluation.py lights --pred pred_labels.zip      --gt val_gt_labels.zip --out results/metrics/lights_finetuned_val --size-dim w
-  python evaluation.py signs  --pred predictions_test.csv --gt gt_test.csv       --out results/metrics/signs_finetuned_test --size-dim none
+Usage (full commands: src/evaluation/README.md, section 8):
+  python evaluation.py lights       --pred pred_labels.zip      --gt val_gt_labels.zip --out ... --size-dim w
+  python evaluation.py signs        --pred predictions_test.csv --gt gt_test.csv       --out ... --size-dim h --sizes image_sizes.csv
+  python evaluation.py lights_video --pred detections.csv       --gt test.yaml         --out ... --size-dim w
 
 Size bins: --size-dim w = box width, h = box height (pixels at model input), none = skip.
-  Person 1 binned lights by WIDTH, Person 2 binned signs by HEIGHT (rescaled to imgsz) -> not comparable yet.
-  Sign bins need each image's original size, which the CSVs do not contain.
+  Lights are binned by WIDTH (Person 1), signs by HEIGHT rescaled to imgsz (Person 2, needs --sizes).
+  The two definitions differ, so light and sign size results are not compared.
+
+lights_video: the video pipeline's detections.csv (Person 3) on the Bosch TEST sequence, matched
+  against Bosch's test.yaml. Frame i of the video is image 24068 + 2*i. Bosch labels are mapped to
+  4 states like Person 1 did (Red* -> red, Green* -> green, Yellow* -> yellow, off -> off).
+  Bosch labels have no track ids, so identity metrics (IDF1, ID switches) cannot be computed.
 
 Note: prediction files are cut at conf >= 0.25, so mAP50 must NOT be computed from them
 (the PR curve is truncated); use Ultralytics val (conf=0.001) for mAP50.
@@ -70,6 +76,43 @@ def load_csv(path):
     df = pd.read_csv(path)
     df["image"] = df["image"].astype(str).str.replace(r"\.(jpg|png|jpeg)$", "", regex=True)
     return df
+
+
+def bosch_state(label):
+    """Bosch label -> 4 states, the same rule as Person 1's map_state (src/traffic_lights/inspect_labels.py)."""
+    l = label.lower()
+    for s in ("red", "yellow", "green"):
+        if l.startswith(s):
+            return s
+    return "off" if l == "off" else None
+
+
+def load_bosch_yaml(path, first=24068, step=2, W=LIGHT_W, H=LIGHT_H):
+    """Bosch test.yaml -> GT boxes keyed by video frame index (image number = first + step * frame).
+    Boxes are sorted and clipped to the image and boxes under 1 px are dropped, like Person 1's
+    convert_to_yolo.py. Keeps Bosch's 'occluded' flag."""
+    import yaml
+    rows = []
+    for e in yaml.safe_load(open(path)):
+        num = int(Path(e["path"]).stem)
+        frame = (num - first) // step
+        for b in e["boxes"]:
+            s = bosch_state(b["label"])
+            x1, x2 = sorted([b["x_min"], b["x_max"]])
+            y1, y2 = sorted([b["y_min"], b["y_max"]])
+            x1, x2, y1, y2 = max(0, x1), min(W, x2), max(0, y1), min(H, y2)
+            if s is None or x2 - x1 < 1 or y2 - y1 < 1:
+                continue
+            rows.append([str(frame), x1, y1, x2, y2, s, bool(b["occluded"])])
+    return pd.DataFrame(rows, columns=["image", "x1", "y1", "x2", "y2", "class_name", "occluded"])
+
+
+def load_video_csv(path, source="light"):
+    """detections.csv of the video pipeline (Person 3) -> rows of one model, keyed by frame index."""
+    df = pd.read_csv(path)
+    df = df[df["source"] == source].copy()
+    df["image"] = df["frame_index"].astype(str)
+    return df[["image", "x1", "y1", "x2", "y2", "class_name", "confidence"]]
 
 
 # ----------------------------------------------------------------------------- matching
@@ -137,6 +180,13 @@ def recall_by_size(gt_m):
     return pd.DataFrame(out)
 
 
+def recall_by_occlusion(gt_m):
+    """Recall for occluded vs. not occluded GT boxes (only when the GT has an 'occluded' flag)."""
+    g = gt_m.groupby("occluded")["matched"].agg(found="sum", total="count")
+    g["recall"] = g["found"] / g["total"]
+    return g.reset_index()
+
+
 def recall_by_class(gt_m):
     g = gt_m.groupby("class_name")["matched"].agg(found="sum", total="count")
     g["recall"] = g["found"] / g["total"]
@@ -162,6 +212,8 @@ def evaluate(pred, gt, classes, dim="h", scale=None, iou_t=IOU_T):
         g = add_size(g, dim, scale)
         key = "class_aware" if aware else "class_agnostic"
         res[key] = dict(summary=summary(p, g), by_size=recall_by_size(g), by_class=recall_by_class(g))
+        if "occluded" in g.columns:
+            res[key]["by_occlusion"] = recall_by_occlusion(g)
         if not aware:
             res["confusion"] = confusion(p, g, classes)
             res["accuracy"] = classification_accuracy(res["confusion"], classes)
@@ -187,13 +239,15 @@ def write(res, out):
         if res[k]["by_size"]["total"].sum() > 0:          # skipped when image sizes are unknown
             res[k]["by_size"].to_csv(out / f"recall_by_size_{k}.csv", index=False)
         res[k]["by_class"].to_csv(out / f"recall_by_class_{k}.csv", index=False)
+        if "by_occlusion" in res[k]:
+            res[k]["by_occlusion"].to_csv(out / f"recall_by_occlusion_{k}.csv", index=False)
     res["confusion"].to_csv(out / "confusion_matrix.csv")
     return pd.DataFrame(rows)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("kind", choices=["lights", "signs"])
+    ap.add_argument("kind", choices=["lights", "signs", "lights_video"])
     ap.add_argument("--pred", required=True)
     ap.add_argument("--gt", required=True)
     ap.add_argument("--out", required=True)
@@ -204,11 +258,14 @@ def main():
     ap.add_argument("--iou", type=float, default=IOU_T,
                     help="IoU threshold for a match (protocol: 0.5; other values are sensitivity checks only)")
     a = ap.parse_args()
-    pred = load_csv(a.pred) if a.pred.endswith(".csv") else load_yolo_txt(a.pred)
-    if a.kind == "lights":
+    if a.kind == "lights_video":
+        pred, gt = load_video_csv(a.pred), load_bosch_yaml(a.gt)
+        classes = list(LIGHT_CLASSES.values())
+    elif a.kind == "lights":
+        pred = load_csv(a.pred) if a.pred.endswith(".csv") else load_yolo_txt(a.pred)
         gt, classes = load_yolo_txt(a.gt), list(LIGHT_CLASSES.values())
     else:
-        gt = load_csv(a.gt)
+        pred, gt = load_csv(a.pred), load_csv(a.gt)
         classes = ["stop", "yield", "speed_limit", "no_entry", "priority_road", "no_parking"]
     scale = None
     if a.sizes:
@@ -221,6 +278,8 @@ def main():
                    iou_t=a.iou)
     print(write(res, a.out).to_string(index=False))
     print(res["class_agnostic"]["by_size"].to_string(index=False))
+    if "by_occlusion" in res["class_agnostic"]:
+        print(res["class_agnostic"]["by_occlusion"].to_string(index=False))
     print(res["confusion"].to_string())
 
 
