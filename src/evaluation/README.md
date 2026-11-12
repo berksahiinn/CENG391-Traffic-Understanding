@@ -14,8 +14,8 @@ handle distance/scale, temporal consistency, and small or partially occluded obj
 | 1 | Are objects found? | Precision, Recall (class-agnostic), mAP50 | GT boxes + predictions | DONE (mAP50 from Ultralytics) |
 | 2 | Is the light state / sign type correct? | Class-aware P/R, confusion matrix, classification accuracy, per-class recall | GT class of matched boxes | DONE |
 | 3 | How fast is it? | Latency (ms/frame) and FPS, model-only and end-to-end | Timestamps on one machine | DONE (Apple M3 Pro, see 6) |
-| 4 | Small / far / occluded / dark / blurred objects? | Recall per size bin; recall occluded vs. not; recall under synthetic degradations | Box sizes, occlusion flag, images | PARTIAL (size bins DONE for lights and signs; occlusion and degradations PLANNED) |
-| 5 | Is tracking temporally consistent? | Proxy measures (see 7) | Tracker output on video | PLANNED |
+| 4 | Small / far / occluded / dark / blurred objects? | Recall per size bin; recall occluded vs. not; recall under synthetic degradations | Box sizes, occlusion flag, images | PARTIAL (size bins DONE for lights and signs; occlusion DONE for lights on the Bosch test sequence; degradations PLANNED) |
+| 5 | Is tracking temporally consistent? | Effect of tracking on P/R against labels; proxy measures (see 7) | Tracker output on labelled video | PARTIAL (tracking vs. no tracking on the Bosch test sequence DONE; identity metrics impossible, no track ids in the labels) |
 
 ## 2. Data used for evaluation
 
@@ -23,6 +23,7 @@ handle distance/scale, temporal consistency, and small or partially occluded obj
 |---|---|---|---|---|
 | Traffic lights (YOLO11n, imgsz 1280) | Bosch Small Traffic Lights | val (sequence-based, other dates/routes than train) | 865 / 1756 | `best.pt` was **selected on this val set** (epoch 23) and there is no separate test set, so results may be optimistic |
 | Traffic signs (YOLO11n, imgsz 1280) | Mapillary Traffic Sign Dataset, 6 classes | **test** (random image split, seed 42) | 218 / 323 | Fair number; val (217 / 313) was used for model selection |
+| Traffic lights on video (video pipeline output) | Bosch Small Traffic Lights, **official test sequence** (`test.yaml`), made into a video by Person 3 | test (never used for training, model selection or thresholds) | 8334 frames / 13486 boxes (2088 occluded) | Independent test set for the light model. Predictions come from the H.264 video and a CSV rounded to 0.1 px, so this measures the system on video. Consecutive 15 fps frames show the same lights, so boxes are not independent samples |
 | Video pipeline | 20 s Kraków driving video (CC BY 3.0), 1280x720, 30 fps, 600 frames | - | - | No ground truth: speed and qualitative results only. Rebuilt independently by Person 4 from the recipe in `src/video_pipeline/README.md` (Person 3); frames match Person 3's sample frames (PSNR 35-40 dB at the same frame index) |
 
 Small classes give unstable numbers and are always reported with their counts: yellow (56) and off (70)
@@ -99,6 +100,30 @@ about half of the false positives lie on a real light with IoU 0.3-0.5, mostly i
 (poor box fit on tiny objects, or imprecise labels on boxes of a few pixels - the data cannot tell
 which). Even at IoU 0.3, 427 of 1013 lights below 10 px are missed.
 
+**Lights on the Bosch test sequence (independent test set, video pipeline output, conf 0.25, IoU 0.5)**,
+outputs in `lights_video_bosch_test_{detect,track}/`:
+
+| Run | Matching | TP | FP | FN | Precision | Recall |
+|---|---|---|---|---|---|---|
+| detect (no tracking) | class-agnostic | 9846 | 1681 | 3640 | 0.854 | 0.730 |
+| detect (no tracking) | class-aware | 9825 | 1702 | 3661 | 0.852 | 0.729 |
+| track (confirmed tracks only) | class-agnostic | 8604 | 757 | 4882 | 0.919 | 0.638 |
+
+| Run | <10 px | 10-20 px | >=20 px | not occluded | occluded |
+|---|---|---|---|---|---|
+| detect | 0.622 (5361/8624) | 0.923 (4094/4436) | 0.918 (391/426) | 0.805 (9176/11398) | 0.321 (670/2088) |
+| track | 0.501 | 0.886 | 0.831 | 0.715 | 0.220 |
+
+(recall, class-agnostic, size = box width)
+
+* The light model reaches a similar level on the independent test set as on val (recall 0.730 vs.
+  0.684, precision 0.854 vs. 0.888), so the val numbers are not clearly optimistic. The two sets come
+  from different drives, so this is not a strict comparison.
+* Occluded lights are found far less often (0.32 vs. 0.81).
+* `off` lights: none of the 442 is detected with the right state (426 missed, 16 found with a colour).
+* Tracking keeps only confirmed tracks, so it works as a temporal filter: fewer false positives
+  (1681 -> 757) but also fewer found lights, mostly small ones. It does not recover missed lights.
+
 ## 6. Speed (DONE on one machine)
 
 Script: `speed.py`. Method: batch 1, imgsz 1280, conf 0.25, the first 20 frames are run but not
@@ -141,15 +166,15 @@ Notes:
   vs. the clean images. Optional: does a pre-processing step (histogram equalization, median filter)
   recover the loss? These are simulated conditions, not real night or motion blur, and will be
   labelled so. Needs the dataset images, so it runs on a machine that has them.
-* **Occlusion**: Bosch provides an `occluded` flag per box; it was dropped during YOLO conversion.
-  With a per-box list from Person 1 we report recall for occluded vs. non-occluded lights.
+* **Occlusion**: DONE for lights on the Bosch test sequence (`occluded` flag in `test.yaml`, see 5).
+  On val the flag was dropped during YOLO conversion; a per-box list from Person 1 would add val.
 * **Tracking / temporal consistency**: no tracking ground truth exists for our video, so identity
   metrics (IDF1, ID switches) cannot be computed. Clearly-limited proxies: number of tracks, mean track
   length, short gaps (object lost for 1-2 frames then found again), and for lights the share of tracks
   whose colour flips, before vs. after majority voting over the last N frames.
-* **Labelled video** (listed as a next stage for Person 4 in `src/video_pipeline/README.md`): the Bosch
-  test sequences have light labels, so detection and tracking could be measured on video for lights.
-  Scope and timing to be agreed by the team.
+* **Labelled video**: DONE for lights on the Bosch test sequence (detection, state, size, occlusion,
+  tracking vs. no tracking; see 5). Bosch labels have no track ids, so ID switches / IDF1 are still not
+  possible. There is no labelled video for signs.
 
 ## 8. Reproducibility record
 
@@ -164,6 +189,9 @@ Inputs that are not in git:
   lights `30554dc9...d6f60408`, signs `e64c1ac0...ab09d14c`.
 * `datasets/videos/sample_drive.mp4` - rebuild with the commands in `src/video_pipeline/README.md`
   (needs ffmpeg; Person 4 used ffmpeg 9.0.2).
+* `datasets/bosch_test/test.yaml` - inside `dataset_test_rgb.zip` (12.2 GB) of Zenodo record 12706046
+  (Bosch licence for non-commercial use; not in git). The file is 2.4 MB; Person 4 fetched only this
+  member with HTTP range requests instead of the whole zip.
 
 ```bash
 # metrics (add --iou 0.3 and an *_iou03 output folder for the sensitivity check)
@@ -173,6 +201,9 @@ python src/evaluation/evaluation.py signs --pred results/traffic_signs/train_y11
   --gt results/traffic_signs/handover/gt_test.csv --out results/metrics/signs_finetuned_test \
   --size-dim h --sizes results/traffic_signs/handover/image_sizes.csv
 # (signs val: replace "test" with "val" in the three paths)
+python src/evaluation/evaluation.py lights_video --pred results/video_pipeline/bosch_test_detect/detections.csv \
+  --gt datasets/bosch_test/test.yaml --out results/metrics/lights_video_bosch_test_detect --size-dim w
+# (tracking run: replace "detect" with "track" in both paths)
 
 # figures (reads only the CSVs above)
 python src/evaluation/plot_metrics.py
@@ -185,7 +216,8 @@ python src/evaluation/speed.py --video datasets/videos/sample_drive.mp4 --device
 
 ## 9. Known limitations (threats to validity)
 
-* Lights are evaluated on the split used for model selection (no independent test set).
+* The main light numbers are on the split used for model selection (val). The Bosch test sequence now
+  gives an independent check, but through the video pipeline (H.264 video, 0.1 px CSV), not on the PNGs.
 * Different split methods: lights sequence-based, signs random per image (near-duplicate images across
   splits not checked).
 * Lights and signs come from different datasets and regions (USA vs. worldwide); their numbers describe
