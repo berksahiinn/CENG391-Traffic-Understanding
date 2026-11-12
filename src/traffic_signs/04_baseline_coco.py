@@ -2,12 +2,13 @@
 
 COCO has only one class related to our task: class 11 'stop sign'.
 So this baseline can only be evaluated on our class 0 (stop).
-The setup (model, imgsz, conf, IoU thresholds, size bins) follows the
-traffic light baseline in src/traffic_lights/baseline_pretrained.py
-so the two results are comparable.
+The model, imgsz, conf, IoU thresholds and bin limits (<10, 10-20, >=20 px)
+follow the traffic light baseline in src/traffic_lights/baseline_pretrained.py.
 
-Size bins use the box height in pixels AFTER resizing the image to the
+Size bins use the box HEIGHT in pixels AFTER resizing the image to the
 model input (longest side = IMGSZ), because that is what the model sees.
+Note: the traffic light baseline bins by box WIDTH (gb[3]-gb[1] = x2-x1),
+so the size-bin recalls of the two baselines are NOT directly comparable.
 
 Outputs (results/traffic_signs/baseline_coco/):
   results.txt      metrics summary
