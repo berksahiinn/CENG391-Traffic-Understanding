@@ -13,8 +13,8 @@ handle distance/scale, temporal consistency, and small or partially occluded obj
 |---|---|---|---|---|
 | 1 | Are objects found? | Precision, Recall (class-agnostic), mAP50 | GT boxes + predictions | DONE (mAP50 from Ultralytics) |
 | 2 | Is the light state / sign type correct? | Class-aware P/R, confusion matrix, classification accuracy, per-class recall | GT class of matched boxes | DONE |
-| 3 | How fast is it? | Latency (ms/frame) and FPS, model-only and end-to-end | Timestamps on one machine | PLANNED |
-| 4 | Small / far / occluded / dark / blurred objects? | Recall per size bin; recall occluded vs. not; recall under synthetic degradations | Box sizes, occlusion flag, images | PARTIAL (lights size bins only) |
+| 3 | How fast is it? | Latency (ms/frame) and FPS, model-only and end-to-end | Timestamps on one machine | DONE (Apple M3 Pro, see 6) |
+| 4 | Small / far / occluded / dark / blurred objects? | Recall per size bin; recall occluded vs. not; recall under synthetic degradations | Box sizes, occlusion flag, images | PARTIAL (size bins DONE for lights and signs; occlusion and degradations PLANNED) |
 | 5 | Is tracking temporally consistent? | Proxy measures (see 7) | Tracker output on video | PLANNED |
 
 ## 2. Data used for evaluation
@@ -23,7 +23,7 @@ handle distance/scale, temporal consistency, and small or partially occluded obj
 |---|---|---|---|---|
 | Traffic lights (YOLO11n, imgsz 1280) | Bosch Small Traffic Lights | val (sequence-based, other dates/routes than train) | 865 / 1756 | `best.pt` was **selected on this val set** (epoch 23) and there is no separate test set, so results may be optimistic |
 | Traffic signs (YOLO11n, imgsz 1280) | Mapillary Traffic Sign Dataset, 6 classes | **test** (random image split, seed 42) | 218 / 323 | Fair number; val (217 / 313) was used for model selection |
-| Video pipeline | 20 s Kraków driving video (CC BY) | - | - | No ground truth: speed and qualitative results only |
+| Video pipeline | 20 s Kraków driving video (CC BY 3.0), 1280x720, 30 fps, 600 frames | - | - | No ground truth: speed and qualitative results only. Rebuilt independently by Person 4 from the recipe in `src/video_pipeline/README.md` (Person 3); frames match Person 3's sample frames (PSNR 35-40 dB at the same frame index) |
 
 Small classes give unstable numbers and are always reported with their counts: yellow (56) and off (70)
 lights; stop (21) and priority_road (27) signs in test.
@@ -51,9 +51,15 @@ This is the same rule Person 1 and Person 2 used; `evaluation.py` reproduces the
   a few boxes from class-aware TP (lights: 1170 vs. 1173) because the two use separate greedy matchings.
 * **Classification accuracy** = correct class / all class-agnostic matches. It isolates
   "wrong colour/type" from "not found".
-* **Size bins** (<10, 10-20, >=20 px at model input). Currently lights use box **width** (Person 1) and
-  signs use box **height** (Person 2) - not comparable yet. Proposal: use the **shorter side**
-  `min(w, h)` for both (team decision pending). Sign bins also need each image's original size.
+* **Size bins** (<10, [10, 20), >=20 px at model input; a box of exactly 10 px is in 10-20).
+  Lights use box **width** (Person 1, images are already 1280x720, so original px = model px).
+  Signs use box **height** at model input (Person 2): `height * 1280 / max(W, H)` of the original image,
+  with image sizes from `results/traffic_signs/handover/image_sizes.csv`.
+  Decision for the progress report: each model keeps its owner's definition, every table/figure states
+  it, and light and sign size results are **not compared** with each other. A common definition
+  (shorter side `min(w, h)`) can be adopted for the final report.
+* Size bins and per-class recall are recall only: a false positive has no GT box, so it has no size or
+  true class.
 
 ## 5. Current results (conf 0.25, IoU 0.5)
 
@@ -65,17 +71,67 @@ This is the same rule Person 1 and Person 2 used; `evaluation.py` reproduces the
 | Signs / test | class-aware | 203 | 101 | 120 | 0.668 | 0.628 |
 
 Classification accuracy on detected objects: lights 0.974 (1170/1201; off only 9/20),
-signs test 0.967 (203/210). mAP50 (Ultralytics): lights val 0.533, signs test 0.643.
-Lights recall by width: <10 px 0.523 (530/1013), 10-20 px 0.894, >=20 px 0.919.
+signs test 0.967 (203/210), signs val 0.966 (196/203). mAP50 (Ultralytics): lights val 0.533,
+signs test 0.643.
 
-## 6. Speed protocol (PLANNED)
+Recall by size (all numbers reproduce Person 1's / Person 2's own results exactly):
 
-All timings on **one machine**, reported with CPU/GPU, OS, Python, torch and ultralytics versions.
-Ignore the first 20 frames (warm-up), then time >= 300 frames at imgsz 1280:
-(a) light model only, (b) sign model only, (c) full pipeline: read frame -> both models -> tracker ->
-draw/write. Report mean and median ms/frame and FPS = 1000 / mean ms. The numbers reported so far
-(Apple M2 5.7 ms, Tesla T4 15.9 ms, RTX 4060 19.8 ms model-only; video pipeline 19.7 FPS on unknown
-hardware) come from different machines and must not be compared directly.
+| Model / split | Size definition | Matching | <10 px | 10-20 px | >=20 px |
+|---|---|---|---|---|---|
+| Lights / val | box width | class-agnostic | 0.523 (530/1013) | 0.894 (420/470) | 0.919 (251/273) |
+| Signs / test | box height at model input | class-aware | 0.189 (10/53) | 0.551 (70/127) | 0.860 (123/143) |
+| Signs / val | box height at model input | class-aware | 0.143 (10/70) | 0.655 (72/110) | 0.857 (114/133) |
+
+Figures (from `plot_metrics.py`): `results/metrics/figures/` - confusion matrices for lights val,
+signs val and signs test (cell text = count, colour = share of row) and recall by size (both
+matchings, one panel per model).
+
+**IoU sensitivity check (not the protocol, IoU 0.3 instead of 0.5)**, outputs in `*_iou03/`:
+
+| Model / split | TP (agnostic) 0.5 -> 0.3 | FP 0.5 -> 0.3 | <10 px recall 0.5 -> 0.3 |
+|---|---|---|---|
+| Lights / val | 1201 -> 1273 | 151 -> 79 | 530 -> 586 of 1013 |
+| Signs / test | 210 -> 212 | 94 -> 92 | 12 -> 13 of 53 |
+| Signs / val | 203 -> 205 | 57 -> 55 | 14 -> 14 of 70 |
+
+For signs, missed small signs are missing detections, not boxes that are slightly off. For lights,
+about half of the false positives lie on a real light with IoU 0.3-0.5, mostly in the smallest bin
+(poor box fit on tiny objects, or imprecise labels on boxes of a few pixels - the data cannot tell
+which). Even at IoU 0.3, 427 of 1013 lights below 10 px are missed.
+
+## 6. Speed (DONE on one machine)
+
+Script: `speed.py`. Method: batch 1, imgsz 1280, conf 0.25, the first 20 frames are run but not
+timed (warm-up), the next 300 frames are timed with `time.perf_counter()`, and the GPU is synchronised
+before each timer stops. Per frame we time video decoding, the light model and the sign model
+(each = pre-processing + inference + post-processing, wall clock).
+**End-to-end = decode + both models (+ tracker).** Drawing boxes and writing the output video are
+**not** included: they are visualisation, not part of the system, and their cost depends on the codec.
+(The earlier plan included them; this was changed when the script was written.)
+
+Machine: Apple M3 Pro, 18 GB, macOS 15.6.1, Python 3.12.7, torch 2.15.0, ultralytics 8.4.211,
+OpenCV 5.0.0. Input: the Kraków clip, 1280x720. Results in `results/metrics/speed/<run>/summary.txt`
+(with per-frame times in `per_frame.csv`).
+
+| Run | Device | Tracking | Both models, ms/frame (mean / p95) | End-to-end FPS |
+|---|---|---|---|---|
+| `m3pro_mps` | MPS (GPU) | no | 22.6 / 23.0 | 43.5 |
+| `m3pro_mps_track` | MPS (GPU) | ByteTrack | 23.9 / 25.6 | 41.2 |
+| `m3pro_cpu` | CPU | no | 157.6 / 170.1 | 6.3 |
+
+The clip is 30 fps, so on the GPU the system runs faster than real time (also at p95); on the CPU it
+does not. Tracking adds about 1.3 ms per frame.
+
+Notes:
+* Report the wall-clock numbers. Ultralytics' own "inference" time on MPS (about 3.9 ms per model) is
+  much lower than the wall clock (about 11 ms); on the CPU the two differ by only about 1.7 ms, so the
+  gap on MPS is not resizing or NMS. Most likely the Ultralytics timer stops before the GPU has finished
+  (the wait happens when the boxes are copied back to the CPU). We do not use it as a result.
+* Other numbers in the team come from other machines or definitions and must not be compared directly:
+  Tesla T4 15.9 ms (Person 1, fine-tuned light model, model only), RTX 4060 19.8 ms (Person 2),
+  5.7 ms (Person 1, COCO baseline model, Ultralytics inference on MPS, chip not recorded); video pipeline
+  19.7 FPS on Apple M4 (Person 3, commit 103efb4, includes drawing and video writing; its 3.7 / 3.5 ms
+  are Ultralytics inference times).
 
 ## 7. Robustness and tracking (PLANNED)
 
@@ -91,20 +147,41 @@ hardware) come from different machines and must not be compared directly.
   metrics (IDF1, ID switches) cannot be computed. Clearly-limited proxies: number of tracks, mean track
   length, short gaps (object lost for 1-2 frames then found again), and for lights the share of tracks
   whose colour flips, before vs. after majority voting over the last N frames.
+* **Labelled video** (listed as a next stage for Person 4 in `src/video_pipeline/README.md`): the Bosch
+  test sequences have light labels, so detection and tracking could be measured on video for lights.
+  Scope and timing to be agreed by the team.
 
-## 8. Reproducibility record (fill for every experiment)
+## 8. Reproducibility record
 
-Data subset and split file, model name and weight file (md5), thresholds (conf, IoU, imgsz), exact
-command, hardware, library versions, date. Example run:
+Every result folder is made by one command from the repo root (activate `.venv` first).
+The scripts only read their inputs and write into `results/metrics/...`.
+
+Inputs that are not in git:
+* `datasets/traffic_lights_eval/{val_gt_labels,pred_labels}.zip` - Person 1's Drive, `tl_runs/finetuned_eval/`
+  (use `pred_labels.zip`, 6 decimals; `val_predictions.csv` is rounded to 0.1 px and changes one match).
+* `models/traffic_lights_y11n_1280_best.pt` (Person 1's Drive link) and `models/traffic_signs_y11n_1280.pt`
+  (GitHub Release `signs-y11n-1280-v1`); both trained with ultralytics 8.4.208. SHA-256:
+  lights `30554dc9...d6f60408`, signs `e64c1ac0...ab09d14c`.
+* `datasets/videos/sample_drive.mp4` - rebuild with the commands in `src/video_pipeline/README.md`
+  (needs ffmpeg; Person 4 used ffmpeg 9.0.2).
 
 ```bash
-python src/evaluation/evaluation.py signs \
-  --pred results/traffic_signs/train_y11n_1280/predictions_test.csv \
-  --gt results/traffic_signs/handover/gt_test.csv \
-  --out results/metrics/signs_finetuned_test --size-dim none
-```
+# metrics (add --iou 0.3 and an *_iou03 output folder for the sensitivity check)
+python src/evaluation/evaluation.py lights --pred datasets/traffic_lights_eval/pred_labels.zip \
+  --gt datasets/traffic_lights_eval/val_gt_labels.zip --out results/metrics/lights_finetuned_val --size-dim w
+python src/evaluation/evaluation.py signs --pred results/traffic_signs/train_y11n_1280/predictions_test.csv \
+  --gt results/traffic_signs/handover/gt_test.csv --out results/metrics/signs_finetuned_test \
+  --size-dim h --sizes results/traffic_signs/handover/image_sizes.csv
+# (signs val: replace "test" with "val" in the three paths)
 
-The script only reads the input files and writes into `--out` (`results/metrics/...`).
+# figures (reads only the CSVs above)
+python src/evaluation/plot_metrics.py
+
+# speed
+python src/evaluation/speed.py --video datasets/videos/sample_drive.mp4 --device mps --name m3pro_mps
+python src/evaluation/speed.py --video datasets/videos/sample_drive.mp4 --device mps --name m3pro_mps_track --track
+python src/evaluation/speed.py --video datasets/videos/sample_drive.mp4 --device cpu --name m3pro_cpu
+```
 
 ## 9. Known limitations (threats to validity)
 
@@ -117,3 +194,7 @@ The script only reads the input files and writes into `--out` (`results/metrics/
   did not train on, so precision is underestimated.
 * Few examples for some classes (see section 2).
 * The video has no ground truth, so on video only speed and qualitative behaviour are reported.
+* Light and sign size bins use different definitions (width vs. height) and must not be compared.
+* Speed is measured on one laptop GPU (Apple M3 Pro); other hardware will give other numbers.
+* Our ultralytics (8.4.211) is newer than the one used for training and for the teammates' runs
+  (8.4.208); all metric numbers still reproduce exactly, and speed was only measured with 8.4.211.
