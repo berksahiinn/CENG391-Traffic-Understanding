@@ -21,10 +21,18 @@ def zip_frames_to_video(zip_path, out_path, fps=15):
             ["ffmpeg", "-loglevel", "error", "-y", "-f", "image2pipe", "-c:v", "png", "-framerate", str(fps),
              "-i", "-", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(out_path)],
             stdin=subprocess.PIPE)
-        for n in names:
-            ffmpeg.stdin.write(z.read(n))
-        ffmpeg.stdin.close()
+        try:
+            for n in names:
+                ffmpeg.stdin.write(z.read(n))
+            ffmpeg.stdin.close()
+        except BaseException:
+            # Without this, ffmpeg would finish a truncated video that looks valid (Ctrl-C, bad zip entry, full disk).
+            ffmpeg.kill()
+            ffmpeg.wait()
+            Path(out_path).unlink(missing_ok=True)
+            raise
     if ffmpeg.wait() != 0:
+        Path(out_path).unlink(missing_ok=True)
         raise RuntimeError(f"ffmpeg failed while writing {out_path}")
     return len(names)
 

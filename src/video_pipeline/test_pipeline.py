@@ -6,8 +6,10 @@ Run from the repo root:
 Each line prints ok, TODO (function not written yet) or FAIL (written but wrong).
 The exit code is 0 only when every test prints ok.
 """
+import subprocess
 import sys
 import tempfile
+import time
 import traceback
 import zipfile
 from pathlib import Path
@@ -107,6 +109,7 @@ def test_zip_frames_to_video_numeric_order():
         with zipfile.ZipFile(zip_path, "w") as z:
             for n in [10, 9, 11]:   # alphabetical order would be 10, 11, 9
                 z.writestr(f"set/rgb/test/{n}.png", cv2.imencode(".png", np.full((48, 64, 3), n * 10, np.uint8))[1].tobytes())
+            z.writestr("set/test.yaml", "")   # non-PNG entries are skipped
         assert zip_frames_to_video(zip_path, out, fps=5) == 3
         cap = cv2.VideoCapture(str(out)); means = []
         while True:
@@ -114,7 +117,28 @@ def test_zip_frames_to_video_numeric_order():
             if not ok:
                 break
             means.append(f.mean())
+        cap.release()
         assert len(means) == 3 and means[0] < means[1] < means[2]   # 9, 10, 11
+
+
+def test_zip_frames_to_video_removes_output_on_error():
+    with tempfile.TemporaryDirectory() as d:
+        zip_path, out = Path(d) / "frames.zip", Path(d) / "out.mp4"
+        pngs = [cv2.imencode(".png", np.full((48, 64, 3), v, np.uint8))[1].tobytes() for v in (10, 200, 30)]
+        with zipfile.ZipFile(zip_path, "w") as z:
+            for n, png in zip([1, 2, 3], pngs):
+                z.writestr(f"{n}.png", png)
+        raw = bytearray(zip_path.read_bytes())
+        raw[raw.find(pngs[1]) + 30] ^= 0xFF   # frame 2 fails its CRC check when read
+        zip_path.write_bytes(bytes(raw))
+        # Run the script as its own process: a leftover ffmpeg finishes the file only after Python exits.
+        script = Path(__file__).parent / "frames_to_video.py"
+        result = subprocess.run([sys.executable, str(script), "--zip", str(zip_path), "--out", str(out)],
+                                capture_output=True, text=True)
+        assert result.returncode != 0 and "BadZipFile" in result.stderr
+        for _ in range(20):   # a leftover ffmpeg would write a truncated file within this time
+            assert not out.exists(), "a truncated video was left behind"
+            time.sleep(0.1)
 
 
 if __name__ == "__main__":
