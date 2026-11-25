@@ -15,7 +15,7 @@ handle distance/scale, temporal consistency, and small or partially occluded obj
 | 2 | Is the light state / sign type correct? | Class-aware P/R, confusion matrix, classification accuracy, per-class recall | GT class of matched boxes | DONE |
 | 3 | How fast is it? | Latency (ms/frame) and FPS, model-only and end-to-end | Timestamps on one machine | DONE (Apple M3 Pro, see 6) |
 | 4 | Small / far / occluded / dark / blurred objects? | Recall per size bin; recall occluded vs. not; recall under synthetic degradations | Box sizes, occlusion flag, images | PARTIAL (size bins DONE for lights and signs; occlusion DONE for lights on the Bosch test sequence; degradations PLANNED) |
-| 5 | Is tracking temporally consistent? | Effect of tracking on P/R against labels; proxy measures (see 7) | Tracker output on labelled video | PARTIAL (tracking vs. no tracking on the Bosch test sequence DONE; identity metrics impossible, no track ids in the labels) |
+| 5 | Is tracking temporally consistent? | Effect of tracking on P/R against labels; proxy measures (see 7) | Tracker output on labelled video | DONE for lights (tracking vs. no tracking on the Bosch test sequence; track lengths and colour changes from Person 3, recounted by Person 4). Identity metrics impossible: no track ids in the labels |
 
 ## 2. Data used for evaluation
 
@@ -39,7 +39,8 @@ lights; stop (21) and priority_road (27) signs in test.
   **Class-aware**: GT class must also be equal ("found and correctly classified?").
 
 This is the same rule Person 1 and Person 2 used; `evaluation.py` reproduces their numbers exactly
-(lights 1201 TP / 151 FP, signs test 203 TP / 101 FP).
+(lights 1201 TP / 151 FP, signs test 203 TP / 101 FP). The team agreed on conf 0.25 / IoU 0.5 as the
+common protocol (25 Nov 2026); other IoU values appear only as sensitivity checks.
 
 ## 4. Metric definitions
 
@@ -158,20 +159,35 @@ Notes:
   19.7 FPS on Apple M4 (Person 3, commit 103efb4, includes drawing and video writing; its 3.7 / 3.5 ms
   are Ultralytics inference times).
 
-## 7. Robustness and tracking (PLANNED)
+What each speed number covers (state this next to every speed number in the report):
 
-* **Synthetic degradations** on the same evaluation images (methods from the CENG391 lab notebooks),
-  each at increasing severity: brightness/contrast `I' = clip(alpha*I + c)`, gamma (power-law),
-  Gaussian blur (kernel 3/9/15), Gaussian noise, salt-and-pepper noise. Report recall and precision
-  vs. the clean images. Optional: does a pre-processing step (histogram equalization, median filter)
-  recover the loss? These are simulated conditions, not real night or motion blur, and will be
-  labelled so. Needs the dataset images, so it runs on a machine that has them.
+| Number | Machine | Decode | Light + sign model | Tracking | Drawing + video writing | Source |
+|---|---|---|---|---|---|---|
+| 43.5 FPS | Apple M3 Pro, MPS | yes | yes | no | no | Person 4, `speed/m3pro_mps` |
+| 41.2 FPS | Apple M3 Pro, MPS | yes | yes | yes | no | Person 4, `speed/m3pro_mps_track` |
+| 6.3 FPS | Apple M3 Pro, CPU | yes | yes | no | no | Person 4, `speed/m3pro_cpu` |
+| 19.7 FPS (Kraków) | Apple M4, MPS | yes | yes | yes | yes | Person 3, `results/video_pipeline/finetuned_track/run_info.txt` |
+| 20.2 / 18.1 FPS (Bosch, detect / track) | Apple M4, MPS | yes | yes | no / yes | yes | Person 3, `results/video_pipeline/bosch_test_{detect,track}/run_info.txt` |
+
+## 7. Robustness and tracking
+
+* **Synthetic degradations** (PLANNED, final, if time allows). Agreed plan with Person 3: apply the
+  degradations to `datasets/videos/bosch_test.mp4` with ffmpeg, re-run the video pipeline (Person 3)
+  and measure each run with `evaluation.py lights_video` against the same `test.yaml` (Person 4); no
+  dataset zip needed. Methods follow the CENG391 lab notebooks, each at increasing severity:
+  brightness/contrast `I' = clip(alpha*I + c)` and gamma (ffmpeg `eq`), Gaussian blur (`gblur`),
+  noise (`noise`). Report precision and recall vs. the clean run. These are simulated conditions on an
+  already compressed video, not real night or motion blur, and will be labelled so.
 * **Occlusion**: DONE for lights on the Bosch test sequence (`occluded` flag in `test.yaml`, see 5).
   On val the flag was dropped during YOLO conversion; a per-box list from Person 1 would add val.
-* **Tracking / temporal consistency**: no tracking ground truth exists for our video, so identity
-  metrics (IDF1, ID switches) cannot be computed. Clearly-limited proxies: number of tracks, mean track
-  length, short gaps (object lost for 1-2 frames then found again), and for lights the share of tracks
-  whose colour flips, before vs. after majority voting over the last N frames.
+* **Tracking / temporal consistency** (DONE for lights, by Person 3): track lengths and colour changes
+  for both videos are in `src/video_pipeline/README.md`. Person 4 recounted them from the committed
+  `detections.csv` files and got the same numbers: Bosch test 147 light tracks, 68 with >= 15 boxes,
+  longest 697 boxes; 19 tracks change colour (22 changes: 17 red->green, 2 green->yellow,
+  2 yellow->red, 1 red->yellow); no single-frame colour flicker. Kraków: one light track of 2 frames.
+  Track gaps are reported for Kraków by Person 3 (Bosch can be added). Identity metrics (IDF1, ID
+  switches) are not possible: no labelled track ids. Precision rising and recall falling with tracking
+  (see 5) is the expected effect of keeping only confirmed tracks (Person 3's design choice).
 * **Labelled video**: DONE for lights on the Bosch test sequence (detection, state, size, occlusion,
   tracking vs. no tracking; see 5). Bosch labels have no track ids, so ID switches / IDF1 are still not
   possible. There is no labelled video for signs.
@@ -225,6 +241,8 @@ python src/evaluation/speed.py --video datasets/videos/sample_drive.mp4 --device
 * Sign false positives are partly unlabeled real signs: on val, 36 of 57 FPs lie on MTSD sign types we
   did not train on, so precision is underestimated.
 * Few examples for some classes (see section 2).
+* `off` lights are not recognised: on the Bosch test sequence none of 442 is found with the right state
+  (426 missed, 16 found with a colour); on val only 9 of 20 detected `off` lights get the right state.
 * The video has no ground truth, so on video only speed and qualitative behaviour are reported.
 * Light and sign size bins use different definitions (width vs. height) and must not be compared.
 * Speed is measured on one laptop GPU (Apple M3 Pro); other hardware will give other numbers.
