@@ -1,0 +1,8 @@
+,stop,yield,speed_limit,no_entry,priority_road,no_parking,missed
+stop,15,1,0,0,0,0,5
+yield,0,38,1,0,0,0,22
+speed_limit,0,0,91,0,0,2,39
+no_entry,0,1,0,17,0,1,14
+priority_road,0,0,0,0,14,0,13
+no_parking,0,0,1,0,0,30,18
+FP,7,4,49,3,4,25,0

@@ -1,0 +1,7 @@
+class_name,found,total,recall
+no_entry,19,37,0.5135135135135135
+no_parking,30,50,0.6
+priority_road,12,15,0.8
+speed_limit,83,126,0.6587301587301587
+stop,26,37,0.7027027027027027
+yield,33,48,0.6875
