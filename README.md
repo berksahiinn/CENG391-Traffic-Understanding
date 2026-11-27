@@ -10,8 +10,8 @@ Driving video → Object detection (YOLO) → Classification (light state / sign
 
 | Member | Responsibility | Folder |
 |---|---|---|
-| [Name] | Traffic light detection and state classification | `src/traffic_lights/` |
-| [Name] | Traffic sign detection and type classification | `src/traffic_signs/` |
+| Zümra Aynurlu | Traffic light detection and state classification | `src/traffic_lights/` |
+| Berk Şahin | Traffic sign detection and type classification | `src/traffic_signs/` |
 | Ege Ayhan | Video processing, tracking, integration | `src/video_pipeline/` |
 | Hatice Akpınar | Evaluation, robustness, experiments | `src/evaluation/` |
 
@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ## Datasets
 
-Datasets and model weights are not included in this repository. Place downloaded data under `datasets/`.
+The full datasets are not included in this repository. Place downloaded data under `datasets/`. The trained model weights are attached to the GitHub Releases. The `results/` folder contains a small number of example images, crops and video excerpts derived from the datasets below (see *Data licences and attribution*).
 
 - **Traffic lights:** [Bosch Small Traffic Lights Dataset](https://hci.iwr.uni-heidelberg.de/content/bosch-small-traffic-lights-dataset)
 - **Traffic signs:** [Mapillary Traffic Sign Dataset](https://www.mapillary.com/dataset/trafficsign) (research edition)
@@ -55,7 +55,6 @@ src/
 ├── video_pipeline/    # video processing and tracking
 └── evaluation/        # metrics and experiments
 results/               # outputs and figures
-report/                # progress report (LaTeX)
 ```
 
 ## Usage
@@ -71,6 +70,15 @@ python src/video_pipeline/video_processing.py --video datasets/videos/sample_dri
 ```
 
 `--name` picks the output folder under `results/video_pipeline/`; the folders already there hold the committed results. Weights, the test video and all options: `src/video_pipeline/README.md`.
+
+## Data licences and attribution
+
+The code in this repository was written by the team for a university course. The example images, crops and videos in `results/` are derived from third-party data and remain under the licences of their sources. They are included only to document our results for non-commercial, educational use.
+
+- **Mapillary Traffic Sign Dataset** (research edition), Ertler et al., ECCV 2020: [mapillary.com/dataset/trafficsign](https://www.mapillary.com/dataset/trafficsign). Used under the Mapillary terms for non-commercial research use. Derived files: `results/traffic_signs/` (sample images, crops, labels and predictions).
+- **Bosch Small Traffic Lights Dataset**, Behrendt et al., ICRA 2017: [Zenodo record 12706046](https://zenodo.org/records/12706046). Bosch "License for NonCommercial Purposes". Derived files: `results/traffic_lights/`, `results/video_pipeline/bosch_test_track/` and `results/metrics/`.
+- **"City Driving 4K - Kraków Poland 2024"** by Relaxing Roads 4K, [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:City_Driving_4K-_Krak%C3%B3w_Poland_2024.webm), licensed under CC BY 3.0. Derived files: the Kraków runs in `results/video_pipeline/` (20-second excerpt, scaled to 1280x720 and 30 fps, with detection boxes drawn on it).
+- **Ultralytics YOLO11** (AGPL-3.0) was used to train and run the models; COCO-pretrained `yolo11n.pt` weights are provided by Ultralytics.
 
 ## References
 
