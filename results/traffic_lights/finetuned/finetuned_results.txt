@@ -1,0 +1,29 @@
+Fine-tuned YOLO11n | imgsz=1280 conf=0.25 IoU>=0.5 | val: 865 images, 1756 lights
+Mean inference: 15.9 ms/image (Tesla T4, model only)
+
+--- CLASS-AGNOSTIC (comparable to baseline) ---
+Precision 0.888 | Recall 0.684 | TP 1201 FP 151
+Recall by size:
+   10-20px  0.894  (420/470)
+   <10px    0.523  (530/1013)
+   >=20px   0.919  (251/273)
+
+--- CLASS-AWARE (correct state required) ---
+Precision 0.868 | Recall 0.668 | TP 1173 FP 179
+Recall by size:
+   10-20px  0.879  (413/470)
+   <10px    0.513  (520/1013)
+   >=20px   0.879  (240/273)
+
+Recall by state (class-aware):
+   red     0.687  (631/919)
+   yellow  0.411  (23/56)
+   green   0.717  (510/711)
+   off     0.129  (9/70)
+
+State confusion (rows = GT, cols = predicted; only class-agnostic matches, 'missed' = not detected):
+               red  yellow   green     off  missed
+   red         628       6       2       8     275
+   yellow        3      23       0       0      30
+   green         1       0     510       0     200
+   off           0       0      11       9      50
