@@ -17,7 +17,7 @@ The IDs are final and shared with the team (`class_map.yaml`).
 
 ## Model
 
-- File: `traffic_signs_y11n_1280.pt` (5.7 MB). Download it from the GitHub Release [`signs-y11n-1280-v1`](https://github.com/berksahiinn/CENG391-Traffic-Understanding/releases/tag/signs-y11n-1280-v1). The repo is private, so you need to be logged in to GitHub. Put the file in `models/`. `*.pt` files are ignored by git.
+- File: `traffic_signs_y11n_1280.pt` (5.7 MB). Download it from the GitHub Release [`signs-y11n-1280-v1`](https://github.com/berksahiinn/CENG391-Traffic-Understanding/releases/tag/signs-y11n-1280-v1). Put the file in `models/`. `*.pt` files are ignored by git.
 - Settings: **imgsz=1280, conf=0.25**. Signs are very small, so a lower imgsz will miss many of them.
 - Training: 100 epochs, batch 8, seed 42, COCO-pretrained `yolo11n.pt`, RTX 4060 Laptop GPU, ultralytics 8.4.208, torch 2.14.1+cu126. Full details are in `results/traffic_signs/train_y11n_1280/run_info.txt`.
 
